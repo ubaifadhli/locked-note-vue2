@@ -4,9 +4,12 @@ import Clipboard from 'v-clipboard'
 import App from './App.vue'
 import router from './router'
 import 'vue2-datepicker/index.css';
+import axios from 'axios'
+import VueAxios from 'vue-axios'
 
 Vue.config.productionTip = false
 
+Vue.use(VueAxios, axios)
 Vue.use(Chakra)
 Vue.use(Clipboard)
 

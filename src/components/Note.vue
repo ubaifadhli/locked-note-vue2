@@ -5,7 +5,7 @@
       <c-box px="6">
         <c-tag size="sm" :variantColor="hasUnlocked ? unlockedColor : lockedColor" my="2">{{ hasUnlocked ? unlockedTag : lockedTag }}</c-tag>
         <c-heading size="lg">{{note.name}}</c-heading>
-        <c-text>Unlocked in {{note.unlockedDate}}</c-text>
+        <c-text>Unlocked in {{ printFormattedDate() }}</c-text>
       </c-box>
 
       <c-box align="center">
@@ -27,16 +27,29 @@
         <c-modal-header>{{ note.name }} - Detail</c-modal-header>
         <c-modal-close-button />
         <c-modal-body >
-          <c-text mb="2">Here is the password for this note :</c-text>
-
-          <c-flex justify="space-between" align="center">
-            <c-input isDisabled v-model="password">
-            </c-input>
+          <c-flex v-if="isFetchingNote" justify="center">
+            <c-spinner
+                thickness="4px"
+                speed="0.65s"
+                empty-color="blue.200"
+                color="blue.500"
+                size="md"
+            />
           </c-flex>
+
+          <c-box v-else>
+            <c-text mb="2">Here is the password for this note :</c-text>
+
+            <c-box justify="space-between" align="center">
+              <c-input isDisabled v-model="note.password">
+              </c-input>
+            </c-box>
+          </c-box>
         </c-modal-body>
         <c-modal-footer>
           <c-button
-              v-clipboard="() => password"
+              :isDisabled="isFetchingNote"
+              v-clipboard="() => note.password"
               v-clipboard:success="onClipboardSuccess"
               v-clipboard:error="onClipboardError">
             Copy to Clipboard
@@ -86,6 +99,7 @@ import {
   CModalCloseButton,
   CTag,
   CInput,
+  CSpinner,
 } from "@chakra-ui/vue";
 
 export default {
@@ -106,6 +120,7 @@ export default {
     CModalCloseButton,
     CTag,
     CInput,
+    CSpinner
   },
 
   props: {
@@ -114,23 +129,24 @@ export default {
 
   data() {
     return {
+      isFetchingNote: false,
+
       isDetailModalOpen: false,
       isDeleteModalOpen: false,
+
       lockedIcon: require('@/assets/locked-icon.png'),
       unlockedIcon: require('@/assets/unlocked-icon.png'),
       lockedTag: 'Locked',
       unlockedTag: 'Unlocked',
       lockedColor: 'red',
       unlockedColor: 'green',
-      hehe: 'hehe',
-      // Fetch password using API, should be using mount stuff
-      password: 'password1'
     }
   },
 
   methods: {
     openDetailModal() {
       this.isDetailModalOpen = true;
+      this.getNotePassword()
     },
 
     closeDetailModal() {
@@ -145,9 +161,54 @@ export default {
       this.isDeleteModalOpen = false;
     },
 
+    getNotePassword() {
+      this.isFetchingNote = true
+
+      this.axios
+          .get('https://locked-note-spring.herokuapp.com/api/v1/notes/' + this.note.id)
+          .then(response => {
+            this.note = response.data
+          })
+          .catch(error => {
+                console.log('fail fetch')
+                console.log(error)
+          })
+          .finally(() => this.isFetchingNote = false)
+    },
+
     deleteNote() {
-      // fetch API to delete Note here
+      this.axios
+          .delete('https://locked-note-spring.herokuapp.com/api/v1/notes/' + this.note.id)
+          .then(response => {
+            // Remove data from array
+            console.log(response)
+            this.showDetailToast(
+                'Note deleted.',
+                'Your note has been deleted.',
+                'success'
+            )
+          })
+          .catch(error => {
+            console.log(error)
+            this.showDetailToast(
+                'Deletion failed.',
+                'Error occured. Your note has not been deleted.',
+                'error'
+            )
+          })
+
       this.closeDeleteModal()
+    },
+
+    printFormattedDate() {
+      const parsedDatetime = new Date(Date.parse(this.note.unlockedDate))
+      var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+      const formattedDate = parsedDatetime.toLocaleDateString("en-US", options)
+      const formattedTime = parsedDatetime.toLocaleTimeString()
+
+      return formattedDate + ', ' + formattedTime
+
     },
 
     onClipboardSuccess() {
@@ -178,7 +239,8 @@ export default {
 
   computed: {
     hasUnlocked() {
-      return this.note.unlockedDate !== 'June 10, 2021'
+      const parsedDatetime = new Date(Date.parse(this.note.unlockedDate))
+      return parsedDatetime < new Date()
     },
   }
 }

@@ -8,8 +8,17 @@
         <c-button left-icon="add" @click="openNewNoteModal" variant-color="blue">New note</c-button>
       </c-flex>
 
+      <c-flex v-if="elementState.isFetchingNotes" justify="center">
+        <c-spinner
+            thickness="4px"
+            speed="0.65s"
+            empty-color="blue.200"
+            color="blue.500"
+            size="xl"
+        />
+      </c-flex>
 
-      <NoteList v-for="note in notes" :key="note.id" :note="note"  />
+      <NoteList v-else v-for="note in notes" :key="note.id" :note="note"  />
 
       <c-modal
           size="sm"
@@ -45,7 +54,7 @@
 
           </c-modal-body>
           <c-modal-footer>
-            <c-button variant-color="green" @click="showDate" mx="2">Create</c-button>
+            <c-button variant-color="green" @click="createNote" mx="2">Create</c-button>
             <c-button @click="closeNewNoteModal" >Cancel</c-button>
           </c-modal-footer>
         </c-modal-content>
@@ -75,6 +84,7 @@ import {
   CFormControl,
   CFormLabel,
   CInput,
+  CSpinner,
 } from "@chakra-ui/vue";
 
 export default {
@@ -96,7 +106,7 @@ export default {
     CFormControl,
     CFormLabel,
     CInput,
-
+    CSpinner,
     NoteList,
   },
   data() {
@@ -109,45 +119,50 @@ export default {
 
       elementState: {
         isNewNoteModalOpen: false,
+        isFetchingNotes: false,
+        isCreatingNote: false,
       },
 
-      notes: [
-        {
-          id: '1',
-          name: 'File A',
-          unlockedDate: 'June 5, 2021',
-        },
-        {
-          id: '2',
-          name: 'File B',
-          unlockedDate: 'June 10, 2021',
-        },
-        {
-          id: '3',
-          name: 'File C',
-          unlockedDate: 'June 12, 2021',
-        },
-        {
-          id: '4',
-          name: 'File D',
-          unlockedDate: 'June 20, 2021',
-        },
-      ]
+      notes: []
     }
+  },
+
+  mounted() {
+    this.getNotes()
   },
 
   methods: {
     openNewNoteModal() {
       this.elementState.isNewNoteModalOpen = true
       this.newNote.pickedDate = null
+      this.newNote.name = null
+      this.newNote.password = null
     },
     closeNewNoteModal() {
       this.elementState.isNewNoteModalOpen = false
       this.newNote.pickedDate = null
+      this.newNote.name = null
+      this.newNote.password = null
     },
 
-    showDate() {
-      console.log(this.newNote.pickedDate)
+    createNote() {
+      this.elementState.isCreatingNote = true
+
+      this.axios
+          .post('https://locked-note-spring.herokuapp.com/api/v1/notes/', {
+            'name': this.newNote.name,
+            'password': this.newNote.password,
+            'unlockedDate': Date.parse(this.newNote.pickedDate)
+          })
+          .then(response => {
+            console.log(response.data)
+          })
+          .catch(error => console.log(error))
+          .finally(() => {
+            this.elementState.isCreatingNote = false
+            this.closeNewNoteModal()
+          })
+
     },
 
     notBeforeCurrentDate(date) {
@@ -175,6 +190,24 @@ export default {
       this.newNote.password = generatedPassword
 
       console.log(this.newNote.password)
+    },
+
+    async getNotes() {
+      this.elementState.isFetchingNotes = true
+
+      this.axios
+          .get('https://locked-note-spring.herokuapp.com/api/v1/notes/')
+          .then(response => {
+            console.log(response.data)
+            this.notes = response.data
+          })
+          .catch(error => console.log(error))
+          .finally(() => this.elementState.isFetchingNotes = false)
+    },
+
+    deleteNote(noteId) {
+      // Still need to fix this
+      this.notes.pop(noteId)
     }
 
   },
