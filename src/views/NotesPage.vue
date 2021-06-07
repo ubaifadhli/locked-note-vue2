@@ -18,7 +18,7 @@
         />
       </c-flex>
 
-      <NoteList v-else v-for="note in notes" :key="note.id" :note="note"  />
+      <NoteList v-else v-for="note in notes" :key="note.id" :note="note" @delete:note="deleteNote"  />
 
       <c-modal
           size="sm"
@@ -156,8 +156,21 @@ export default {
           })
           .then(response => {
             console.log(response.data)
+            this.notes.push(response.data)
+            this.showDetailToast(
+                'Note Created.',
+                'Your note has been created.',
+                'success'
+            )
           })
-          .catch(error => console.log(error))
+          .catch(error => {
+            console.log(error)
+            this.showDetailToast(
+                'Failed to Create Note.',
+                'Unable to create note. Please try again.',
+                'error'
+            )
+          })
           .finally(() => {
             this.elementState.isCreatingNote = false
             this.closeNewNoteModal()
@@ -206,9 +219,18 @@ export default {
     },
 
     deleteNote(noteId) {
-      // Still need to fix this
-      this.notes.pop(noteId)
-    }
+      const noteIndex = this.notes.findIndex(note => note.id === noteId)
+      this.notes.splice(noteIndex, 1)
+    },
+
+    showDetailToast(title, description, status) {
+      this.$toast({
+        title: title,
+        description: description,
+        status: status,
+        duration: 5000
+      })
+    },
 
   },
 

@@ -180,7 +180,7 @@ export default {
       this.axios
           .delete('https://locked-note-spring.herokuapp.com/api/v1/notes/' + this.note.id)
           .then(response => {
-            // Remove data from array
+            this.$emit('delete:note', this.note.id)
             console.log(response)
             this.showDetailToast(
                 'Note deleted.',
@@ -201,7 +201,7 @@ export default {
     },
 
     printFormattedDate() {
-      const parsedDatetime = new Date(Date.parse(this.note.unlockedDate))
+      const parsedDatetime = new Date(this.note.unlockedDate)
       var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
       const formattedDate = parsedDatetime.toLocaleDateString("en-US", options)
@@ -239,7 +239,7 @@ export default {
 
   computed: {
     hasUnlocked() {
-      const parsedDatetime = new Date(Date.parse(this.note.unlockedDate))
+      const parsedDatetime = new Date(this.note.unlockedDate)
       return parsedDatetime < new Date()
     },
   }
